@@ -4,6 +4,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import store from './src/Store/store'
 
 export default class ToDoApp extends Component {
+  
   render() {
     return (
       <Provider store={store}>
