@@ -17,10 +17,11 @@ import { bindActionCreators } from "redux";
 import { ActionCreators } from "../actions/index";
 import { responsiveWidth } from "../helpers/Responsive";
 import styles from "../styles/homeStyle";
-
+import firebase from 'react-native-firebase';
 class HomeScreen extends Component {
   constructor(props) {
     super(props);
+    this.userName=null
     this.state = {
       currentPosition: 0,
       activeSlide: 2,
@@ -30,11 +31,33 @@ class HomeScreen extends Component {
       date: '',
       time: "",
       curTime:null,
-      isPopUpVisible:false
+      isPopUpVisible:false,
+      userName:''
     };
   }
-  componentDidMount() {}
+  componentDidMount() {
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user._user !== null) {
+          this.userId = user._user.uid;
+          this.setState({userName:user._user.displayName})
+          // console.log(user._user.displayName)
+          // this.userName=user._user.displayName;
 
+      }
+  });
+  this.fetchTodoData();
+   // this.readUserData(this.userId);
+  }
+
+  fetchTodoData(){
+
+  }
+
+  readUserData(userId) {
+    firebase.database().ref('Users/'+this.userId+'/').once('value', function (snapshot) {
+       // console.log(snapshot.val())
+    });
+}
   _renderItem({ item, index }) {
     return (
       <View style={styles.carouselContentContainer}>
@@ -80,11 +103,8 @@ class HomeScreen extends Component {
         is24Hour: false, // Will display '2 PM'
       });
       if (action !== TimePickerAndroid.dismissedAction) {
-       console.log(hour)
-       console.log(minute)
-
        this.setState({
-         time:hour+":"+minute
+         time:('0' + hour).slice(-2)+":"+('0' + minute).slice(-2)
        })
       }
     } catch ({code, message}) {
@@ -93,6 +113,23 @@ class HomeScreen extends Component {
   };
   onButtonPress=()=>{
     this.setState({isPopUpVisible:true})
+  }
+  saveButtonPressed(title,date,time){
+    console.log(date);
+    console.log(time);
+    console.log(title);
+    let milliseconds=Date.parse(date +' '+ time)
+    this.setState({isPopUpVisible:false});
+    firebase.database().ref('Users/'+ this.userId+ '/todo' + '/').push({
+      title,
+      milliseconds
+  }).then((data)=>{
+      //success callback
+      console.log(data)
+  }).catch((error)=>{
+      //error callback
+      console.log('error ' , error)
+  })
   }
   render() {
     const labels = ["Last week", "Yesterday", "Today", "Tomorrow", "Later"];
@@ -115,17 +152,15 @@ class HomeScreen extends Component {
       stepIndicatorUnFinishedColor: "#f2f2f2",
       stepIndicatorLabelFontSize: 0,
       currentStepIndicatorLabelFontSize: 0,
-      //stepIndicatorLabelCurrentColor:'#000'
     };
     let currentDate=new Date().toLocaleDateString();
-    let currentTime=new  Date().toLocaleTimeString()
-    //console.log(currentDate);
+    let currentTime=new Date().getHours() +":"+new Date().getMinutes();
     return (
       <View style={styles.container}>
         <View style={styles.contentContainer}>
           <View style={styles.headingContainer}>
             <Text style={styles.helloBoldText}>Hello</Text>
-            <Text style={styles.helloBoldText}>Jhony!</Text>
+            <Text style={styles.helloBoldText}>{(this.state.userName!==null)?this.state.userName+" ":null}!</Text>
             <Text style={styles.smallHeadingText}>
               You have 3 new task today
             </Text>
@@ -204,9 +239,7 @@ class HomeScreen extends Component {
             
               <View style={styles.singleButtonContainer}>
               <TouchableOpacity onPress={()=>{
-              this.setState({
-                isPopUpVisible:false
-              })
+              this.saveButtonPressed(this.state.text,this.state.date,this.state.time)
             }}>
                 <Text style={styles.popUpButtonText}>Save</Text>
                 </TouchableOpacity>
